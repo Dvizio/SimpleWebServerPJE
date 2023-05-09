@@ -14,6 +14,7 @@ public class SimpleWebServerPJE {
 
     private int port;
     private String rootDirectory;
+    private String serverAddress;
 
     public SimpleWebServerPJE() {
         loadConfiguration();
@@ -27,6 +28,7 @@ public class SimpleWebServerPJE {
                 config.load(inputStream);
                 port = Integer.parseInt(config.getProperty("port", String.valueOf(DEFAULT_PORT)));
                 rootDirectory = config.getProperty("rootDirectory", "");
+                serverAddress = config.getProperty("server.address", "localhost");
             } else {
                 System.out.println("Configuration file not found. Using default values.");
                 port = DEFAULT_PORT;
@@ -41,8 +43,8 @@ public class SimpleWebServerPJE {
 
     public void start() {
         try {
-            ServerSocket serverSocket = new ServerSocket(port);
-            System.out.println("Server started on port " + port + "...");
+            ServerSocket serverSocket = new ServerSocket(port, 0, InetAddress.getByName(serverAddress));
+            System.out.println("Server started. Listening on " + serverAddress + ":" + port);
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
