@@ -29,7 +29,8 @@ public class SimpleWebServerPJE {
                 config.load(inputStream);
                 port = Integer.parseInt(config.getProperty("port", String.valueOf(DEFAULT_PORT)));
                 rootDirectory = config.getProperty("rootDirectory", "");
-                hostName = config.getProperty("IPAddress", "");
+                hostName = config.getProperty("hostName", "");
+                System.out.println("This is hostName " + hostName);
             } else {
                 System.out.println("Configuration file not found. Using default values.");
                 port = DEFAULT_PORT;
@@ -47,7 +48,7 @@ public class SimpleWebServerPJE {
         try {
             ServerSocket serverSocket;
             if(hostName.isEmpty()){
-                serverSocket = new ServerSocket(port, MAX_CONNECTIONS, InetAddress.getLocalHost());
+                serverSocket = new ServerSocket(port);
             }
             else{
                 serverSocket = new ServerSocket(port, MAX_CONNECTIONS, Inet4Address.getByName(hostName));
@@ -58,6 +59,8 @@ public class SimpleWebServerPJE {
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
+                System.out.println(clientSocket);
+                // System.out.println(clientSocket);
                 new ClientHandler(clientSocket).start();
             }
         } catch (IOException e) {
