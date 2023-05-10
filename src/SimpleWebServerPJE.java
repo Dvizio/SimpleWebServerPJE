@@ -112,7 +112,12 @@ public class SimpleWebServerPJE {
                 if (file.isDirectory()) {
                     File indexFile = new File(file, INDEX_FILE_NAME);
                     if (indexFile.exists()) {
-                        sendFile(outputStream, indexFile);
+                        try{
+                            sendHTML(outputStream, indexFile);
+                        }
+                        catch(Exception e){
+                            e.printStackTrace();
+                        }
                     } else {
                         sendDirectoryListing(outputStream, file);
                     }
