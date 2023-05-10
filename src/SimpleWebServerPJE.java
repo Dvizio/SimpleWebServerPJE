@@ -11,9 +11,11 @@ public class SimpleWebServerPJE {
     private static final String CONFIG_FILE_PATH = "config.properties";
     private static final String INDEX_FILE_NAME = "index.html";
     private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
+    private static final int MAX_CONNECTIONS = 10;
 
     private int port;
     private String rootDirectory;
+    private String hostName;
 
     public SimpleWebServerPJE() {
         loadConfiguration();
@@ -27,10 +29,12 @@ public class SimpleWebServerPJE {
                 config.load(inputStream);
                 port = Integer.parseInt(config.getProperty("port", String.valueOf(DEFAULT_PORT)));
                 rootDirectory = config.getProperty("rootDirectory", "");
+                hostName = config.getProperty("IPAddress", "");
             } else {
                 System.out.println("Configuration file not found. Using default values.");
                 port = DEFAULT_PORT;
                 rootDirectory = "";
+                hostName = "";
             }
         } catch (IOException e) {
             System.out.println("Error loading configuration file. Using default values.");
@@ -41,8 +45,16 @@ public class SimpleWebServerPJE {
 
     public void start() {
         try {
-            ServerSocket serverSocket = new ServerSocket(port);
-            System.out.println("Server started on port " + port + "...");
+            ServerSocket serverSocket;
+            if(hostName.isEmpty()){
+                serverSocket = new ServerSocket(port, MAX_CONNECTIONS, InetAddress.getLocalHost());
+            }
+            else{
+                serverSocket = new ServerSocket(port, MAX_CONNECTIONS, Inet4Address.getByName(hostName));
+
+            }            
+            System.out.println("Server started on port " + serverSocket.getLocalPort() + "...");
+            System.out.println("Server started on IPAddress " + serverSocket.getInetAddress() + "...");
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -63,7 +75,7 @@ public class SimpleWebServerPJE {
         @Override
         public void run() {
             try (InputStream inputStream = clientSocket.getInputStream();
-                 OutputStream outputStream = clientSocket.getOutputStream()) {
+                    OutputStream outputStream = clientSocket.getOutputStream()) {
 
                 BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
                 String request = reader.readLine();
@@ -102,10 +114,53 @@ public class SimpleWebServerPJE {
                         sendDirectoryListing(outputStream, file);
                     }
                 } else {
+                    if (file.toString().contains(".html")) {
+                        // Buat liatin HTML
+                        try {
+                            sendHTML(outputStream, file);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
                     sendFile(outputStream, file);
                 }
             } else {
                 sendResponse(outputStream, "HTTP/1.1 404 Not Found", "File Not Found");
+            }
+        }
+
+        private void sendHTML(OutputStream outputStream, File file) throws Exception {
+            FileInputStream fileInputStream = null;
+            try {
+                fileInputStream = new FileInputStream(file);
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+
+                // Set appropriate content type based on file extension
+                String contentType = "text/html";
+                // Set appropriate response headers
+                String responseHeaders = "HTTP/1.1 200 OK\r\n"
+                        + "Content-Type: " + contentType + "\r\n"
+                        + "Connection: close\r\n"
+                        + "\r\n";
+
+                // Write response headers to output stream
+                outputStream.write(responseHeaders.getBytes());
+
+                // Write file data to output stream
+                while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+
+                outputStream.flush();
+            } finally {
+                if (fileInputStream != null) {
+                    try {
+                        fileInputStream.close();
+                    } catch (IOException e) {
+                        // Ignore
+                    }
+                }
             }
         }
 
@@ -156,59 +211,56 @@ public class SimpleWebServerPJE {
             }
         }
 
-	}
+    }
 
-	private void sendDirectoryListing(OutputStream outputStream, File directory) throws IOException {
-	    File[] files = directory.listFiles();
-	    SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-	
-	    StringBuilder listingBuilder = new StringBuilder();
-	    listingBuilder.append("<html><head><title>Directory Listing</title></head><body>");
-	    listingBuilder.append("<h1>Directory Listing</h1>");
-	    listingBuilder.append("<ul>");
-	
-	    for (File file : files) {
-	        String fileName = file.getName();
-	        String modifiedDate = dateFormat.format(new Date(file.lastModified()));
-	        String fileSize = String.valueOf(file.length());
-	
-	        listingBuilder.append("<li><a href=\"").append(fileName).append("\">").append(fileName).append("</a> (")
-	                .append("Size: ").append(fileSize).append(" bytes, ")
-	                .append("Last Modified: ").append(modifiedDate).append(")</li>");
-	    }
-	
-	    listingBuilder.append("</ul></body></html>");
-	
-	    String listing = listingBuilder.toString();
-	    sendResponse(outputStream, "HTTP/1.1 200 OK", "OK", "text/html");
-	    outputStream.write(listing.getBytes());
-	}
+    private void sendDirectoryListing(OutputStream outputStream, File directory) throws IOException {
+        File[] files = directory.listFiles();
+        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 
-		private void sendResponse(OutputStream outputStream, String statusLine, String statusMessage) throws IOException {
-		    String response = statusLine + "\r\n"
-		            + "Connection: close\r\n"
-		            + "\r\n"
-		            + statusMessage;
-		
-		    outputStream.write(response.getBytes());
-		}
-		
-		private void sendResponse(OutputStream outputStream, String statusLine, String statusMessage, String contentType) throws IOException {
-		    String responseHeaders = "HTTP/1.1 " + statusLine + "\r\n"
-		            + "Content-Type: " + contentType + "\r\n"
-		            + "Connection: close\r\n"
-		            + "\r\n";
+        StringBuilder listingBuilder = new StringBuilder();
+        listingBuilder.append("<html><head><title>Directory Listing</title></head><body>");
+        listingBuilder.append("<h1>Directory Listing</h1>");
+        listingBuilder.append("<ul>");
 
-		    String response = responseHeaders + statusMessage;
-		    outputStream.write(response.getBytes());
-		}
+        for (File file : files) {
+            String fileName = file.getName();
+            String modifiedDate = dateFormat.format(new Date(file.lastModified()));
+            String fileSize = String.valueOf(file.length());
 
-		
-		
-		public static void main(String[] args) {
-		SimpleWebServerPJE webServer = new SimpleWebServerPJE();
-		webServer.start();
-		}
+            listingBuilder.append("<li><a href=\"").append(fileName).append("\">").append(fileName).append("</a> (")
+                    .append("Size: ").append(fileSize).append(" bytes, ")
+                    .append("Last Modified: ").append(modifiedDate).append(")</li>");
+        }
+
+        listingBuilder.append("</ul></body></html>");
+
+        String listing = listingBuilder.toString();
+        sendResponse(outputStream, "HTTP/1.1 200 OK", "OK", "text/html");
+        outputStream.write(listing.getBytes());
+    }
+
+    private void sendResponse(OutputStream outputStream, String statusLine, String statusMessage) throws IOException {
+        String response = statusLine + "\r\n"
+                + "Connection: close\r\n"
+                + "\r\n"
+                + statusMessage;
+
+        outputStream.write(response.getBytes());
+    }
+
+    private void sendResponse(OutputStream outputStream, String statusLine, String statusMessage, String contentType)
+            throws IOException {
+        String responseHeaders = "HTTP/1.1 " + statusLine + "\r\n"
+                + "Content-Type: " + contentType + "\r\n"
+                + "Connection: close\r\n"
+                + "\r\n";
+
+        String response = responseHeaders + statusMessage;
+        outputStream.write(response.getBytes());
+    }
+
+    public static void main(String[] args) {
+        SimpleWebServerPJE webServer = new SimpleWebServerPJE();
+        webServer.start();
+    }
 }
-
-            
