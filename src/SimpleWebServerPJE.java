@@ -31,6 +31,7 @@ public class SimpleWebServerPJE {
                 rootDirectory = config.getProperty("rootDirectory", "");
                 hostName = config.getProperty("hostName", "");
                 System.out.println("This is hostName " + hostName);
+                // System.out.println(rootDirectory);
             } else {
                 System.out.println("Configuration file not found. Using default values.");
                 port = DEFAULT_PORT;
@@ -108,6 +109,7 @@ public class SimpleWebServerPJE {
 
         private void handleGetRequest(OutputStream outputStream, String path) throws IOException {
             File file = new File(rootDirectory + path);
+            System.out.println(file);
             if (file.exists()) {
                 if (file.isDirectory()) {
                     File indexFile = new File(file, INDEX_FILE_NAME);
@@ -223,6 +225,10 @@ public class SimpleWebServerPJE {
 
     private void sendDirectoryListing(OutputStream outputStream, File directory) throws IOException {
         File[] files = directory.listFiles();
+        String dir = directory.getAbsolutePath();
+        String dirCut = dir.replace(rootDirectory, "");
+        String dirReplaceSlash = dirCut.replace("\\", "/");
+        System.out.println(dirReplaceSlash);
         SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
 
         StringBuilder listingBuilder = new StringBuilder();
@@ -235,7 +241,7 @@ public class SimpleWebServerPJE {
             String modifiedDate = dateFormat.format(new Date(file.lastModified()));
             String fileSize = String.valueOf(file.length());
 
-            listingBuilder.append("<li><a href=\"").append(fileName).append("\">").append(fileName).append("</a> (")
+            listingBuilder.append("<li><a href=\"").append(dirReplaceSlash).append("/").append(fileName).append("\">").append(fileName).append("</a> (")
                     .append("Size: ").append(fileSize).append(" bytes, ")
                     .append("Last Modified: ").append(modifiedDate).append(")</li>");
         }
@@ -265,10 +271,5 @@ public class SimpleWebServerPJE {
 
         String response = responseHeaders + statusMessage;
         outputStream.write(response.getBytes());
-    }
-
-    public static void main(String[] args) {
-        SimpleWebServerPJE webServer = new SimpleWebServerPJE();
-        webServer.start();
     }
 }
