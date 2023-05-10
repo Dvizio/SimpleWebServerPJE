@@ -230,14 +230,24 @@ public class SimpleWebServerPJE {
         listingBuilder.append("<h1>Directory Listing</h1>");
         listingBuilder.append("<ul>");
 
-        for (File file : files) {
-            String fileName = file.getName();
-            String modifiedDate = dateFormat.format(new Date(file.lastModified()));
-            String fileSize = String.valueOf(file.length());
+        if (files != null) {
+            for (File file : files) {
+                String fileName = file.getName();
+                String modifiedDate = dateFormat.format(new Date(file.lastModified()));
+                String fileSize = String.valueOf(file.length());
 
-            listingBuilder.append("<li><a href=\"").append(fileName).append("\">").append(fileName).append("</a> (")
-                    .append("Size: ").append(fileSize).append(" bytes, ")
-                    .append("Last Modified: ").append(modifiedDate).append(")</li>");
+                if (file.isDirectory()) {
+                    // Recursively list all files and directories in the nested directory
+                    listingBuilder.append("<li><strong>").append(fileName).append("</strong> (")
+                            .append("Size: ").append(fileSize).append(" bytes, ")
+                            .append("Last Modified: ").append(modifiedDate).append(")</li>");
+                    sendDirectoryListing(outputStream, file);
+                } else {
+                    listingBuilder.append("<li><a href=\"").append(fileName).append("\">").append(fileName).append("</a> (")
+                            .append("Size: ").append(fileSize).append(" bytes, ")
+                            .append("Last Modified: ").append(modifiedDate).append(")</li>");
+                }
+            }
         }
 
         listingBuilder.append("</ul></body></html>");
