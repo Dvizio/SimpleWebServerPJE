@@ -6,19 +6,21 @@ import java.util.Date;
 import java.util.Properties;
 
 
-public class SimpleWebServerPJE {
+public class SimpleWebServerPJE extends Thread{
     private static final int DEFAULT_PORT = 8080;
     private static final String CONFIG_FILE_PATH = "config.properties";
     private static final String INDEX_FILE_NAME = "index.html";
     private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
     private static final int MAX_CONNECTIONS = 10;
 
+    private int serverID;
     private int port;
     private String rootDirectory;
     private String hostName;
 
-    public SimpleWebServerPJE() {
-        loadConfiguration();
+    public SimpleWebServerPJE(int serverID) {
+        this.serverID = serverID + 1;
+        newLoadConfiguration();
     }
 
     private void loadConfiguration() {
@@ -45,7 +47,39 @@ public class SimpleWebServerPJE {
         }
     }
 
-    public void start() {
+    private void newLoadConfiguration() {
+        try {
+            Properties config = new Properties();
+            InputStream inputStream = getClass().getClassLoader().getResourceAsStream(CONFIG_FILE_PATH);
+            if (inputStream != null) {
+                // Readies the config name
+                String portConfigKey = "port" + Integer.toString(serverID);
+                String rootDirectoryConfigKey = "rootDirectory" + Integer.toString(serverID);
+                String hostNameConfigKey = "hostName" + Integer.toString(serverID);
+
+                config.load(inputStream);
+                // port = Integer.parseInt(config.getProperty("port", String.valueOf(DEFAULT_PORT)));
+                port = Integer.parseInt(config.getProperty(portConfigKey, String.valueOf(DEFAULT_PORT)));
+                // rootDirectory = config.getProperty("rootDirectory", "");
+                rootDirectory = config.getProperty(rootDirectoryConfigKey, "");
+                // hostName = config.getProperty("hostName", "");
+                hostName = config.getProperty(hostNameConfigKey, "");
+                System.out.println("This is hostName " + hostName);
+                // System.out.println(rootDirectory);
+            } else {
+                System.out.println("Configuration file not found. Using default values.");
+                port = DEFAULT_PORT;
+                rootDirectory = "";
+                hostName = "";
+            }
+        } catch (IOException e) {
+            System.out.println("Error loading configuration file. Using default values.");
+            port = DEFAULT_PORT;
+            rootDirectory = "";
+        }
+    }
+
+    public void run() {
         try {
             ServerSocket serverSocket;
             if(hostName.isEmpty()){

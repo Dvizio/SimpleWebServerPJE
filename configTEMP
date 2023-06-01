@@ -1,0 +1,4 @@
+numberOfHost=2
+port=9000
+rootDirectory=D:\\ProgrammingKuliah\\SimpleWebServerPJE\\hosting_files
+hostName=testserver.local
